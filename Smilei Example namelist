@@ -1,0 +1,150 @@
+# ----------------------------------------------------------------------------------------
+#                     SIMULATION PARAMETERS FOR THE PIC-CODE SMILEI
+# ----------------------------------------------------------------------------------------
+
+import math
+import numpy as np
+# the units are normalised w.r.t to laser freq
+n_cells = [512,320]      # number of cells
+n_timesteps = 6000       # duration of the simulation
+res = [0.4, 4.0]         # resolution
+
+
+#laser parameters
+w_0=44.4/0.127
+#50fs T_r=55.5fs
+laser_t_fwhm = 5/0.424 #intensity FWHM
+field_t_fwhm = laser_t_fwhm*math.sqrt(2.0)
+laser_t0 = laser_t_fwhm*2.0
+
+
+
+
+Main(
+    geometry = "2Dcartesian",
+
+    interpolation_order = 2 ,
+
+    number_of_patches = [ 8, 8 ],
+
+    cell_length = res,
+    number_of_cells = n_cells,
+    
+
+
+
+    timestep_over_CFL = 0.99,
+    number_of_timesteps = n_timesteps,
+    solve_poisson = False,
+    EM_boundary_conditions = [["silver-muller","silver-muller"]],
+    print_every = int(n_timesteps/100),
+    reference_angular_frequency_SI = 2.36e15,
+    random_seed = smilei_mpi_rank,
+)
+#reference_angular_frequency_SI = 2.36e15,
+
+# laser initialisation 
+LaserGaussian2D(
+    box_side         = "xmin",
+    a0              = 0.015,
+    focus           = [0,(n_cells[1]*res[1])/2.0],
+    waist           = w_0,
+    ellipticity      = 1.0, #polarisation
+    time_envelope   = tgaussian(start=0.,fwhm=field_t_fwhm,center=laser_t0)
+)
+
+# nitrogen initialisation
+Species(
+    name = 'nitrogen',
+    ionization_model = 'tunnel',
+    ionization_electrons = 'electron',
+    atomic_number = 7,
+    position_initialization = 'regular',
+    momentum_initialization = 'cold',
+    particles_per_cell = 4,
+    mass = 1836.0*1000,
+    charge = 0.0,
+    number_density = 0.0005714285714,
+    boundary_conditions = [["remove"]],
+)
+
+# electron initialisation 
+Species(
+    name = 'electron',
+    position_initialization = 'regular',
+    momentum_initialization = 'cold',
+    particles_per_cell = 0,
+    mass = 1.0,
+    charge = -1.0,
+    charge_density = 0.0,
+    boundary_conditions = [["remove"]]
+)
+
+# collisional ionisation
+Collisions(
+    species1 = ["electron"],
+    species2 = ["nitrogen"],
+    coulomb_log = 0.,
+    coulomb_log_factor = 1.,
+    debug_every = 0,
+    ionizing = True,
+)
+
+#diagonistic unit
+globalEvery=1000
+
+'''
+list_fields = ['Rho_electron']
+
+DiagFields(
+   every = globalEvery,
+        fields = list_fields
+)
+
+                                                                                                                                                    
+DiagParticleBinning(
+	deposited_quantity = "weight",
+	every = globalEvery,
+	species = ["nitrogen"],
+	axes = [
+		["charge",  -0.5, 7.5, 8]
+	]
+
+)
+'''
+
+DiagParticleBinning(
+    deposited_quantity = "weight",
+    every = globalEvery,
+    time_average = 1,
+    species = ["electron"],
+    axes = [["y", 320.,960., 40], 
+    ["px",   -0.05,   0.05,    100],
+    ["py",   -0.05,   0.05,    100],
+    ["pz",   -0.05,   0.05,    100] 
+]
+)
+'''
+DiagParticleBinning(
+    deposited_quantity = "weight",
+    every = globalEvery,
+    time_average = 1,
+    species = ["electron"],
+    axes = [ ["px",   -0.05,   0.05,    100],
+    ["py",   -0.05,   0.05,    100],
+]
+)
+
+
+DiagParticleBinning(
+    deposited_quantity = "weight",
+    every = globalEvery,
+    time_average = 1,
+    species = ["electron"],
+    axes = [ ["px",   -0.05,   0.05,    100],
+    ["py",   -0.05,   0.05,    100],
+    ["pz",   -0.05,   0.05,    100] 
+]
+)
+
+'''
